@@ -67,7 +67,10 @@
   <div style="display:flex; gap:8px; margin:0 0 1rem;">
     <input id="pick-input" type="text" placeholder="Player name just picked" style="flex:1;" />
     <button id="add-btn">Add pick</button>
+    <button id="undo-btn" title="Undo last pick"><i class="ti ti-arrow-back-up"></i></button>
+    <button id="reset-btn" title="Reset draft"><i class="ti ti-trash"></i></button>
   </div>
+  <p id="save-status" style="font-size:11px; color:var(--text-muted); margin:-0.75rem 0 1rem;">&nbsp;</p>
 
   <div id="turn-banner" style="border-radius:var(--radius); padding:12px 16px; margin:0 0 1.5rem; font-size:15px; font-weight:500; display:flex; align-items:center; gap:8px;"></div>
 
@@ -138,7 +141,33 @@ let players = [
   {n:"Pittsburgh Steelers",p:"DST"},{n:"Los Angeles Chargers",p:"DST"},{n:"Denver Broncos",p:"DST"},{n:"Seattle Seahawks",p:"DST"},{n:"Jacksonville Jaguars",p:"DST"},{n:"Houston Texans",p:"DST"},{n:"Los Angeles Rams",p:"DST"},{n:"Baltimore Ravens",p:"DST"}
 ];
 
+const STORAGE_KEY = 'rfl-draft-2026';
 let picks = [];
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ picks, players }));
+    const status = document.getElementById('save-status');
+    const now = new Date();
+    status.textContent = 'Saved ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    document.getElementById('save-status').textContent = 'Could not save (browser storage unavailable)';
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data && Array.isArray(data.picks) && Array.isArray(data.players)) {
+      picks = data.picks;
+      players = data.players;
+      return picks.length > 0;
+    }
+  } catch (e) {}
+  return false;
+}
 
 function pickInfo(overall) {
   const round = Math.ceil(overall / teams.length);
@@ -215,12 +244,31 @@ function addPick() {
   if (!name) return;
   const overall = picks.length + 1;
   const { round, team, cls } = pickInfo(overall);
-  picks.push({ name, team, round, overall, cls });
   const idx = players.findIndex(pl => pl.n.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(pl.n.toLowerCase()));
-  if (idx !== -1) players.splice(idx, 1);
+  let removedPlayer = null;
+  if (idx !== -1) {
+    removedPlayer = players[idx];
+    players.splice(idx, 1);
+  }
+  picks.push({ name, team, round, overall, cls, removedPlayer });
   input.value = '';
   renderAll();
+  saveState();
   input.focus();
+}
+
+function undoPick() {
+  if (!picks.length) return;
+  const last = picks.pop();
+  if (last.removedPlayer) players.push(last.removedPlayer);
+  renderAll();
+  saveState();
+}
+
+function resetDraft() {
+  if (!confirm('Reset the whole draft? This clears all logged picks.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
 }
 
 document.getElementById('add-btn').addEventListener('click', addPick);
@@ -228,8 +276,14 @@ document.getElementById('pick-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') addPick();
 });
 document.getElementById('pos-filter').addEventListener('change', renderAvailable);
+document.getElementById('undo-btn').addEventListener('click', undoPick);
+document.getElementById('reset-btn').addEventListener('click', resetDraft);
 
+const restored = loadState();
 renderAll();
+if (restored) {
+  document.getElementById('save-status').textContent = 'Restored ' + picks.length + ' saved pick' + (picks.length === 1 ? '' : 's') + ' from this browser';
+}
 </script>
 </body>
 </html>
