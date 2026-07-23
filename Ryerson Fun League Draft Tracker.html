@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ryerson Fun League Draft Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+<style>
+  :root{
+    --surface-2:#ffffff; --surface-1:#f5f4f0; --surface-0:#efeee8;
+    --text-primary:#111111; --text-secondary:#5f5e5a; --text-muted:#888780;
+    --border:#e2e0d8; --border-strong:#c9c7bd;
+    --bg-accent:#e6f1fb; --text-accent:#0c447c; --border-accent:#378add;
+    --radius:8px; --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-2:#1c1c1a; --surface-1:#242422; --surface-0:#161615;
+      --text-primary:#f1efe8; --text-secondary:#b4b2a9; --text-muted:#888780;
+      --border:#3a3934; --border-strong:#4a4941;
+      --bg-accent:#0c447c; --text-accent:#b5d4f4; --border-accent:#378add;
+    }
+  }
+  html,body{background:var(--surface-0); color:var(--text-primary); font-family:var(--font-sans); margin:0; padding:24px;}
+  .wrap{max-width:720px; margin:0 auto; background:var(--surface-2); border:0.5px solid var(--border); border-radius:12px; padding:1.5rem 1.75rem;}
+  h1{font-size:20px; font-weight:500; margin:0 0 1.25rem; display:flex; align-items:center; gap:8px;}
+  input, select, button{font-family:inherit; font-size:14px; border-radius:var(--radius); border:0.5px solid var(--border-strong); background:var(--surface-2); color:var(--text-primary); height:36px; padding:0 10px;}
+  button{cursor:pointer;}
+  button:hover{background:var(--surface-1);}
+  button:active{transform:scale(0.98);}
+  .team-amber{background:#FAEEDA;color:#412402;border-left:3px solid #BA7517;border-radius:0}
+  .team-pink{background:#FBEAF0;color:#4B1528;border-left:3px solid #D4537E;border-radius:0}
+  .team-teal{background:#E1F5EE;color:#04342C;border-left:3px solid #1D9E75;border-radius:0}
+  .team-coral{background:#FAECE7;color:#4A1B0C;border-left:3px solid #D85A30;border-radius:0}
+  .team-purple{background:#EEEDFE;color:#26215C;border-left:3px solid #7F77DD;border-radius:0}
+  .team-green{background:#EAF3DE;color:#173404;border-left:3px solid #639922;border-radius:0}
+  .team-red{background:#FCEBEB;color:#501313;border-left:3px solid #E24B4A;border-radius:0}
+  .team-accent{background:var(--bg-accent);color:var(--text-accent);border-left:3px solid var(--border-accent);border-radius:0}
+  @media (prefers-color-scheme: dark){
+    .team-amber{background:#633806;color:#FAEEDA;border-left-color:#EF9F27}
+    .team-pink{background:#72243E;color:#FBEAF0;border-left-color:#ED93B1}
+    .team-teal{background:#085041;color:#E1F5EE;border-left-color:#5DCAA5}
+    .team-coral{background:#712B13;color:#FAECE7;border-left-color:#F0997B}
+    .team-purple{background:#3C3489;color:#EEEDFE;border-left-color:#AFA9EC}
+    .team-green{background:#27500A;color:#EAF3DE;border-left-color:#97C459}
+    .team-red{background:#791F1F;color:#FCEBEB;border-left-color:#F09595}
+  }
+  .pos-badge{font-size:11px;padding:1px 7px;border-radius:var(--radius)}
+  .pos-QB{background:var(--bg-accent);color:var(--text-accent)}
+  .pos-RB{background:#FAECE7;color:#4A1B0C}
+  .pos-WR{background:#E1F5EE;color:#04342C}
+  .pos-TE{background:#EEEDFE;color:#26215C}
+  .pos-K{background:#FAEEDA;color:#412402}
+  .pos-DST{background:#F1EFE8;color:#2C2C2A}
+  @media (prefers-color-scheme: dark){
+    .pos-RB{background:#712B13;color:#FAECE7}
+    .pos-WR{background:#085041;color:#E1F5EE}
+    .pos-TE{background:#3C3489;color:#EEEDFE}
+    .pos-K{background:#633806;color:#FAEEDA}
+    .pos-DST{background:#444441;color:#F1EFE8}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><i class="ti ti-ball-american-football"></i> Ryerson Fun League — Draft Tracker</h1>
+
+  <div style="display:flex; gap:8px; margin:0 0 1rem;">
+    <input id="pick-input" type="text" placeholder="Player name just picked" style="flex:1;" />
+    <button id="add-btn">Add pick</button>
+  </div>
+
+  <div id="turn-banner" style="border-radius:var(--radius); padding:12px 16px; margin:0 0 1.5rem; font-size:15px; font-weight:500; display:flex; align-items:center; gap:8px;"></div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:0 0 1.5rem;">
+    <div>
+      <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Your roster (Dad)</p>
+      <div id="roster" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+    </div>
+    <div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 8px;">
+        <p style="font-size:13px; color:var(--text-secondary); margin:0;">Top available</p>
+        <select id="pos-filter" style="font-size:13px; height:28px; padding:0 6px;">
+          <option value="ALL">All positions</option>
+          <option value="QB">QB</option>
+          <option value="RB">RB</option>
+          <option value="WR">WR</option>
+          <option value="TE">TE</option>
+          <option value="FLEX">Flex (RB/WR/TE)</option>
+          <option value="K">K</option>
+          <option value="DST">DST</option>
+        </select>
+      </div>
+      <div id="available" style="font-size:13px; line-height:2;"></div>
+    </div>
+  </div>
+
+  <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Draft board</p>
+  <div id="board" style="max-height:340px; overflow-y:auto; border:0.5px solid var(--border); border-radius:var(--radius);"></div>
+  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Player rankings based on live 2026 ADP and season projections pulled Jul 21, 2026. Re-run through Claude periodically for updates.</p>
+</div>
+
+<script>
+const teams = ["Grandpa","Kathy (FLUFF)","kenzie","JJ (Palmskii)","Grandma","Hailey (Radiator Springs Racers)","Dad","Kaedon (K-Dawgg)"];
+const teamClass = ["team-amber","team-pink","team-teal","team-coral","team-purple","team-green","team-accent","team-red"];
+const YOU = "Dad";
+const TOTAL_ROUNDS = 16;
+
+let players = [
+  {n:"Bijan Robinson",p:"RB",s:294.32},{n:"Jahmyr Gibbs",p:"RB",s:303.51},{n:"Jonathan Taylor",p:"RB",s:269.41},{n:"Christian McCaffrey",p:"RB",s:265.55},{n:"James Cook",p:"RB",s:241.72},
+  {n:"Ja'Marr Chase",p:"WR",s:216.32},{n:"Kenneth Walker III",p:"RB"},{n:"Puka Nacua",p:"WR",s:235.43},{n:"Jaxon Smith-Njigba",p:"WR",s:215.66},{n:"De'Von Achane",p:"RB",s:233.48},
+  {n:"Ashton Jeanty",p:"RB",s:219.95},{n:"Omarion Hampton",p:"RB"},{n:"Saquon Barkley",p:"RB",s:225.91},{n:"CeeDee Lamb",p:"WR",s:176.06},{n:"Jeremiyah Love",p:"RB"},
+  {n:"Amon-Ra St. Brown",p:"WR",s:203.17},{n:"Chase Brown",p:"RB"},{n:"Justin Jefferson",p:"WR",s:171.48},{n:"Drake London",p:"WR",s:189.3},{n:"Josh Jacobs",p:"RB",s:223.72},
+  {n:"Trey McBride",p:"TE",s:147.94},{n:"Bucky Irving",p:"RB"},{n:"Malik Nabers",p:"WR"},{n:"Derrick Henry",p:"RB",s:258.62},{n:"Kyren Williams",p:"RB"},
+  {n:"Nico Collins",p:"WR"},{n:"Breece Hall",p:"RB"},{n:"George Pickens",p:"WR",s:170.64},{n:"Travis Etienne",p:"RB"},{n:"Brock Bowers",p:"TE",s:147.57},
+  {n:"Josh Allen",p:"QB",s:423.85},{n:"Chris Olave",p:"WR"},{n:"Javonte Williams",p:"RB"},{n:"A.J. Brown",p:"WR",s:169.03},{n:"Rashee Rice",p:"WR",s:176.07},
+  {n:"Tee Higgins",p:"WR"},{n:"TreVeyon Henderson",p:"RB"},{n:"Tetairoa McMillan",p:"WR"},{n:"Garrett Wilson",p:"WR"},{n:"Luther Burden III",p:"WR"},
+  {n:"RJ Harvey",p:"RB"},{n:"Lamar Jackson",p:"QB",s:379.78},{n:"Cameron Skattebo",p:"RB"},{n:"Jaylen Waddle",p:"WR"},{n:"Bhayshul Tuten",p:"RB"},
+  {n:"Quinshon Judkins",p:"RB"},{n:"Davante Adams",p:"WR"},{n:"Ladd McConkey",p:"WR"},{n:"D'Andre Swift",p:"RB"},{n:"David Montgomery",p:"RB"},
+  {n:"Colston Loveland",p:"TE",s:131.78},{n:"Drake Maye",p:"QB",s:384.26},{n:"Zay Flowers",p:"WR"},{n:"Jaylen Warren",p:"RB"},{n:"Jameson Williams",p:"WR"},
+  {n:"DeVonta Smith",p:"WR"},{n:"Emeka Egbuka",p:"WR"},{n:"Terry McLaurin",p:"WR"},{n:"Tyler Warren",p:"TE",s:119.45},{n:"Rhamondre Stevenson",p:"RB"},
+  {n:"D.J. Moore",p:"WR"},{n:"Mike Evans",p:"WR"},{n:"Joe Burrow",p:"QB",s:369.69},{n:"Carnell Tate",p:"WR"},{n:"Kyle Monangai",p:"RB"},
+  {n:"Harold Fannin Jr.",p:"TE",s:113.94},{n:"Tony Pollard",p:"RB"},{n:"Christian Watson",p:"WR"},{n:"Rico Dowdle",p:"RB"},{n:"Jayden Daniels",p:"QB",s:367.23},
+  {n:"Chuba Hubbard",p:"RB"},{n:"Rome Odunze",p:"WR"},{n:"Blake Corum",p:"RB"},{n:"Jalen Hurts",p:"QB",s:369.76},{n:"Jordyn Tyson",p:"WR"},
+  {n:"Tucker Kraft",p:"TE",s:113.36},{n:"Courtland Sutton",p:"WR"},{n:"Kyle Pitts",p:"TE",s:116.38},{n:"D.K. Metcalf",p:"WR"},{n:"J.K. Dobbins",p:"RB"},
+  {n:"Michael Wilson",p:"WR"},{n:"Makai Lemon",p:"WR"},{n:"Jakobi Meyers",p:"WR"},{n:"Brian Thomas Jr.",p:"WR"},{n:"Sam LaPorta",p:"TE",s:113.92},
+  {n:"Brian Robinson Jr.",p:"RB"},{n:"Dalton Kincaid",p:"TE"},{n:"Marvin Harrison Jr.",p:"WR"},{n:"Oronde Gadsden II",p:"TE"},{n:"Jaxson Dart",p:"QB",s:351.06},
+  {n:"Aaron Jones",p:"RB"},{n:"Ricky Pearsall",p:"WR"},{n:"Kenneth Gainwell",p:"RB"},{n:"Justin Herbert",p:"QB"},{n:"Alec Pierce",p:"WR"},
+  {n:"Chris Godwin",p:"WR"},{n:"Tyler Allgeier",p:"RB"},{n:"Parker Washington",p:"WR"},{n:"Caleb Williams",p:"QB"},{n:"Hunter Henry",p:"TE"},
+  {n:"James Conner",p:"RB"},{n:"Dallas Goedert",p:"TE",s:113.87},{n:"Trevor Lawrence",p:"QB",s:350.83},{n:"Jacory Croskey-Merritt",p:"RB"},{n:"Mark Andrews",p:"TE"},
+  {n:"Jake Ferguson",p:"TE"},{n:"Dalton Schultz",p:"TE"},{n:"Dak Prescott",p:"QB",s:362.09},{n:"Jordan Addison",p:"WR"},{n:"George Kittle",p:"TE"},
+  {n:"Zach Charbonnet",p:"RB"},{n:"Jadarian Price",p:"RB"},{n:"Patrick Mahomes",p:"QB"},{n:"Juwan Johnson",p:"TE"},{n:"Brenton Strange",p:"TE"},
+  {n:"Woody Marks",p:"RB"},{n:"Wan'Dale Robinson",p:"WR"},{n:"Travis Kelce",p:"TE",s:109.64},{n:"Brock Purdy",p:"QB",s:356.21},{n:"Michael Pittman Jr.",p:"WR"},
+  {n:"Kenyon Sadiq",p:"TE"},{n:"Tyrone Tracy Jr.",p:"RB"},{n:"Quentin Johnston",p:"WR"},{n:"Jordan Mason",p:"RB"},{n:"Emmett Johnson",p:"RB"},
+  {n:"Isaiah Likely",p:"TE"},{n:"Trey Benson",p:"RB"},{n:"Stefon Diggs",p:"WR"},{n:"Romeo Doubs",p:"WR"},{n:"Jonah Coleman",p:"RB"},
+  {n:"Matthew Stafford",p:"QB"},{n:"Jayden Reed",p:"WR"},{n:"Alvin Kamara",p:"RB"},{n:"Khalil Shakir",p:"WR"},{n:"Bo Nix",p:"QB"},
+  {n:"Xavier Worthy",p:"WR"},{n:"Tyjae Spears",p:"RB"},{n:"Jauan Jennings",p:"WR"},{n:"Rachaad White",p:"RB"},{n:"AJ Barner",p:"TE"},
+  {n:"Brandon Aubrey",p:"K"},{n:"Cameron Dicker",p:"K"},{n:"Ka'imi Fairbairn",p:"K"},{n:"Jason Myers",p:"K"},{n:"Evan McPherson",p:"K"},{n:"Chase McLaughlin",p:"K"},{n:"Cam Little",p:"K"},{n:"Chris Boswell",p:"K"},
+  {n:"Pittsburgh Steelers",p:"DST"},{n:"Los Angeles Chargers",p:"DST"},{n:"Denver Broncos",p:"DST"},{n:"Seattle Seahawks",p:"DST"},{n:"Jacksonville Jaguars",p:"DST"},{n:"Houston Texans",p:"DST"},{n:"Los Angeles Rams",p:"DST"},{n:"Baltimore Ravens",p:"DST"}
+];
+
+let picks = [];
+
+function pickInfo(overall) {
+  const round = Math.ceil(overall / teams.length);
+  const posInRound = (overall - 1) % teams.length;
+  const idx = round % 2 === 1 ? posInRound : teams.length - 1 - posInRound;
+  return { round, team: teams[idx], cls: teamClass[idx] };
+}
+
+function renderTurn() {
+  const overall = picks.length + 1;
+  const el = document.getElementById('turn-banner');
+  el.className = '';
+  if (overall > teams.length * TOTAL_ROUNDS) {
+    el.style.background = 'var(--surface-1)';
+    el.style.color = 'var(--text-secondary)';
+    el.innerHTML = 'Draft complete';
+    return;
+  }
+  const { round, team, cls } = pickInfo(overall);
+  el.className = cls;
+  const isYou = team === YOU;
+  el.innerHTML = '<i class="ti ti-ball-american-football"></i> Round ' + round + ', pick ' + overall + ' — ' + (isYou ? 'your turn (Dad)' : team + "'s turn");
+}
+
+function renderRoster() {
+  const el = document.getElementById('roster');
+  const mine = picks.filter(p => p.team === YOU);
+  el.innerHTML = mine.length ? mine.map(p =>
+    '<span style="background:var(--bg-accent); color:var(--text-accent); font-size:13px; padding:4px 10px; border-radius:var(--radius);">' + p.name + '</span>'
+  ).join('') : '<span style="font-size:13px; color:var(--text-muted);">No picks yet</span>';
+}
+
+function rankedPool(filter) {
+  let pool;
+  if (filter === 'ALL') return players.slice(0, 8);
+  if (filter === 'FLEX') pool = players.filter(pl => pl.p === 'RB' || pl.p === 'WR' || pl.p === 'TE');
+  else pool = players.filter(pl => pl.p === filter);
+  const scored = pool.filter(pl => pl.s != null).sort((a, b) => b.s - a.s);
+  const unscored = pool.filter(pl => pl.s == null);
+  return scored.concat(unscored).slice(0, 8);
+}
+
+function renderAvailable() {
+  const el = document.getElementById('available');
+  const filter = document.getElementById('pos-filter').value;
+  const top = rankedPool(filter);
+  el.innerHTML = top.length ? top.map((pl, i) =>
+    '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span></div>'
+  ).join('') : '<div style="color:var(--text-muted);">None left</div>';
+}
+
+function renderBoard() {
+  const el = document.getElementById('board');
+  if (!picks.length) {
+    el.innerHTML = '<div style="padding:12px; font-size:13px; color:var(--text-muted);">No picks logged yet</div>';
+    return;
+  }
+  el.innerHTML = picks.slice().reverse().map(p =>
+    '<div class="' + p.cls + '" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:0.5px solid var(--border); font-size:13px;">' +
+    '<span><i class="ti ti-ball-american-football" style="font-size:14px; margin-right:6px;"></i>R' + p.round + '.' + p.overall + ' — ' + p.team + '</span><span style="font-weight:500;">' + p.name + '</span></div>'
+  ).join('');
+}
+
+function renderAll() {
+  renderTurn();
+  renderRoster();
+  renderAvailable();
+  renderBoard();
+}
+
+function addPick() {
+  const input = document.getElementById('pick-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const overall = picks.length + 1;
+  const { round, team, cls } = pickInfo(overall);
+  picks.push({ name, team, round, overall, cls });
+  const idx = players.findIndex(pl => pl.n.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(pl.n.toLowerCase()));
+  if (idx !== -1) players.splice(idx, 1);
+  input.value = '';
+  renderAll();
+  input.focus();
+}
+
+document.getElementById('add-btn').addEventListener('click', addPick);
+document.getElementById('pick-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addPick();
+});
+document.getElementById('pos-filter').addEventListener('change', renderAvailable);
+
+renderAll();
+</script>
+</body>
+</html>
