@@ -106,7 +106,7 @@
 
   <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Draft board</p>
   <div id="board" style="max-height:340px; overflow-y:auto; border:0.5px solid var(--border); border-radius:var(--radius);"></div>
-  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Rankings blend two data sets. The "+X.X pts" value on each player is Value Over Replacement computed from their actual 2025 stats run through THIS league's exact scoring (0 PPR, 6pt passing TDs, our real roster settings) — this is what actually decides the sort order and the Recommended pick. Live ADP (refreshed via <i class="ti ti-refresh"></i>, Fantasy Football Calculator) is layered on top only to flag "won't last" — players our formula likes who the broader market will likely draft before your next turn. Depth chart position and rookie status come from Sleeper. Limitations: the custom scoring can't account for interceptions thrown, 2pt conversions, or single-game yardage/TD-length bonuses (needs game logs we don't have access to), and it's based on last season's production, not a 2026 forecast — so trust it as a strong guide, not gospel, especially for rookies and players in new situations. Live draft: Sat., Aug 29, 2026, 5:00 PM CDT, snake, 90 sec/pick.</p>
+  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Rankings blend two data sets. The "+X.X pts" value on each player is Value Over Replacement computed from their actual 2025 stats run through THIS league's exact scoring (0 PPR, 6pt passing TDs, our real roster settings) — this is what actually decides the sort order and the Recommended pick. Live ADP (refreshed via <i class="ti ti-refresh"></i>, Fantasy Football Calculator) is layered on top only to flag "won't last" — players our formula likes who the broader market will likely draft before your next turn. Depth chart position, rookie status, and NFL team come from Sleeper. Limitations: the custom scoring can't account for interceptions thrown, 2pt conversions, or single-game yardage/TD-length bonuses (needs game logs we don't have access to), and it's based on last season's production, not a 2026 forecast — so trust it as a strong guide, not gospel, especially for rookies and players in new situations. Live draft: Sat., Aug 29, 2026, 5:00 PM CDT, snake, 90 sec/pick.</p>
 </div>
 
 <script>
@@ -247,7 +247,8 @@ async function fetchDepthCharts() {
     byName.push({
       n: name,
       rookie: pl.years_exp === 0,
-      depth: depth
+      depth: depth,
+      team: pl.team || null
     });
   });
 
@@ -259,6 +260,7 @@ async function fetchDepthCharts() {
     if (found) {
       existing.rookie = found.rookie || undefined;
       existing.depth = found.depth || undefined;
+      if (existing.p !== 'DST') existing.team = found.team || undefined;
       matched++;
     }
   });
@@ -454,6 +456,7 @@ function renderAvailable() {
   el.innerHTML = top.length ? top.map((pl, i) => {
     const urgent = pl.adp != null && pl.adp <= nextTurn;
     return '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
+    (pl.team ? ' <span style="color:var(--text-muted); font-size:11px;">' + pl.team + '</span>' : '') +
     (pl.vor != null ? ' <span style="color:var(--text-muted); font-size:11px;" title="Value over replacement under our league\'s exact scoring">' + (pl.vor >= 0 ? '+' : '') + pl.vor.toFixed(1) + ' pts</span>' : '') +
     (pl.depth ? ' <span class="pos-badge" style="background:var(--surface-1); color:var(--text-secondary);">' + pl.depth + '</span>' : '') +
     (pl.rookie ? ' <span class="pos-badge" style="background:var(--bg-accent); color:var(--text-accent);">R</span>' : '') +
