@@ -106,7 +106,7 @@
 
   <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Draft board</p>
   <div id="board" style="max-height:340px; overflow-y:auto; border:0.5px solid var(--border); border-radius:var(--radius);"></div>
-  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Base rankings pulled Jul 21, 2026. Click <i class="ti ti-refresh"></i> above to pull current ADP from Fantasy Football Calculator (Standard, 8-team, matching this league's scoring). Note: this league awards 6 pts per passing TD (not the usual 4), which no free ADP source models — value QBs higher than the list suggests. Live draft: Sat., Aug 29, 2026, 5:00 PM CDT, snake, 90 sec/pick.</p>
+  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Base rankings pulled Jul 21, 2026. Click <i class="ti ti-refresh"></i> above to pull current ADP from Fantasy Football Calculator (Standard, 8-team, matching this league's scoring), plus depth chart position and rookie status from Sleeper. Badges: e.g. "RB2" = second on that team's depth chart, "R" = rookie (no NFL experience). Note: this league awards 6 pts per passing TD (not the usual 4), which no free ADP source models — value QBs higher than the list suggests. Live draft: Sat., Aug 29, 2026, 5:00 PM CDT, snake, 90 sec/pick.</p>
 </div>
 
 <script>
@@ -166,51 +166,105 @@ function namesMatch(a, b) {
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
+async function fetchADP() {
+  const url = 'https://fantasyfootballcalculator.com/api/v1/adp/' + ADP_FORMAT + '?teams=' + teams.length + '&year=' + ADP_YEAR;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  const live = (data.players || []).map(p => ({
+    n: p.name,
+    p: p.position === 'DEF' ? 'DST' : p.position,
+    adp: p.adp,
+    bye: p.bye || null
+  }));
+  if (!live.length) throw new Error('empty response');
+
+  const draftedNames = picks.map(pk => pk.name);
+  let updated = 0, added = 0;
+
+  live.forEach(lp => {
+    if (draftedNames.some(dn => namesMatch(dn, lp.n))) return;
+    const existing = players.find(pl => namesMatch(pl.n, lp.n));
+    if (existing) {
+      existing.s = Math.max(0, 1000 - lp.adp);
+      existing.adp = lp.adp;
+      if (lp.bye) existing.bye = lp.bye;
+      updated++;
+    } else {
+      players.push({ n: lp.n, p: lp.p, s: Math.max(0, 1000 - lp.adp), adp: lp.adp, bye: lp.bye });
+      added++;
+    }
+  });
+  return { updated, added };
+}
+
+async function fetchDepthCharts() {
+  const res = await fetch('https://api.sleeper.app/v1/players/nfl');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : Object.values(data || {});
+  if (!list.length) throw new Error('empty response');
+
+  const relevant = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  const byName = [];
+  list.forEach(pl => {
+    if (!pl || !relevant.includes(pl.position)) return;
+    const name = pl.full_name || ((pl.first_name || '') + ' ' + (pl.last_name || '')).trim();
+    if (!name) return;
+    let depth = null;
+    if (pl.depth_chart_position && pl.depth_chart_order) {
+      depth = pl.depth_chart_position + pl.depth_chart_order;
+    }
+    byName.push({
+      n: name,
+      rookie: pl.years_exp === 0,
+      depth: depth
+    });
+  });
+
+  const draftedNames = picks.map(pk => pk.name);
+  let matched = 0;
+  players.forEach(existing => {
+    if (draftedNames.some(dn => namesMatch(dn, existing.n))) return;
+    const found = byName.find(dp => namesMatch(existing.n, dp.n));
+    if (found) {
+      existing.rookie = found.rookie || undefined;
+      existing.depth = found.depth || undefined;
+      matched++;
+    }
+  });
+  return { matched };
+}
+
 async function fetchLiveRankings() {
   const btn = document.getElementById('refresh-btn');
   const status = document.getElementById('rankings-status');
   btn.disabled = true;
   status.textContent = 'Refreshing rankings…';
+  const now = new Date();
+  const stamp = now.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const parts = [];
+
   try {
-    const url = 'https://fantasyfootballcalculator.com/api/v1/adp/' + ADP_FORMAT + '?teams=' + teams.length + '&year=' + ADP_YEAR;
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-    const live = (data.players || []).map(p => ({
-      n: p.name,
-      p: p.position === 'DEF' ? 'DST' : p.position,
-      adp: p.adp,
-      bye: p.bye || null
-    }));
-    if (!live.length) throw new Error('empty response');
-
-    const draftedNames = picks.map(pk => pk.name);
-    let updated = 0, added = 0;
-
-    live.forEach(lp => {
-      if (draftedNames.some(dn => namesMatch(dn, lp.n))) return;
-      const existing = players.find(pl => namesMatch(pl.n, lp.n));
-      if (existing) {
-        existing.s = Math.max(0, 1000 - lp.adp);
-        existing.adp = lp.adp;
-        if (lp.bye) existing.bye = lp.bye;
-        updated++;
-      } else {
-        players.push({ n: lp.n, p: lp.p, s: Math.max(0, 1000 - lp.adp), adp: lp.adp, bye: lp.bye });
-        added++;
-      }
-    });
-
-    renderAll();
-    saveState();
-    const now = new Date();
-    localStorage.setItem(RANKINGS_KEY, now.toISOString());
-    status.textContent = 'Live rankings refreshed ' + now.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' — ' + updated + ' updated, ' + added + ' added';
+    const adpResult = await fetchADP();
+    parts.push('ADP: ' + adpResult.updated + ' updated, ' + adpResult.added + ' added');
   } catch (e) {
-    status.textContent = 'Could not reach live rankings (' + e.message + '). Showing existing data.';
-  } finally {
-    btn.disabled = false;
+    parts.push('ADP refresh failed (' + e.message + ')');
   }
+
+  try {
+    status.textContent = 'Fetching depth charts and rookie status…';
+    const depthResult = await fetchDepthCharts();
+    parts.push('depth charts: ' + depthResult.matched + ' matched');
+  } catch (e) {
+    parts.push('depth chart fetch failed (' + e.message + ')');
+  }
+
+  renderAll();
+  saveState();
+  localStorage.setItem(RANKINGS_KEY, now.toISOString());
+  status.textContent = 'Refreshed ' + stamp + ' — ' + parts.join('; ');
+  btn.disabled = false;
 }
 
 function showRankingsStatusOnLoad() {
@@ -334,6 +388,8 @@ function renderAvailable() {
   const top = rankedPool(filter);
   el.innerHTML = top.length ? top.map((pl, i) =>
     '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
+    (pl.depth ? ' <span class="pos-badge" style="background:var(--surface-1); color:var(--text-secondary);">' + pl.depth + '</span>' : '') +
+    (pl.rookie ? ' <span class="pos-badge" style="background:var(--bg-accent); color:var(--text-accent);">R</span>' : '') +
     (pl.bye ? ' <span style="color:var(--text-muted); font-size:11px;">bye ' + pl.bye + '</span>' : '') +
     '</div>'
   ).join('') : '<div style="color:var(--text-muted);">None left</div>';
