@@ -166,11 +166,23 @@ function namesMatch(a, b) {
   return na === nb || na.includes(nb) || nb.includes(na);
 }
 
+async function fetchJsonWithCorsFallback(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch (directErr) {
+    // Direct fetch likely blocked by the target's CORS policy — retry via a public CORS proxy.
+    const proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+    const res2 = await fetch(proxied);
+    if (!res2.ok) throw new Error('HTTP ' + res2.status + ' (via proxy)');
+    return await res2.json();
+  }
+}
+
 async function fetchADP() {
   const url = 'https://fantasyfootballcalculator.com/api/v1/adp/' + ADP_FORMAT + '?teams=' + teams.length + '&year=' + ADP_YEAR;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  const data = await res.json();
+  const data = await fetchJsonWithCorsFallback(url);
   const live = (data.players || []).map(p => ({
     n: p.name,
     p: p.position === 'DEF' ? 'DST' : p.position,
