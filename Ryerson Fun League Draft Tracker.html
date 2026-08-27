@@ -167,17 +167,25 @@ function namesMatch(a, b) {
 }
 
 async function fetchJsonWithCorsFallback(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return await res.json();
-  } catch (directErr) {
-    // Direct fetch likely blocked by the target's CORS policy — retry via a public CORS proxy.
-    const proxied = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-    const res2 = await fetch(proxied);
-    if (!res2.ok) throw new Error('HTTP ' + res2.status + ' (via proxy)');
-    return await res2.json();
+  // Try direct first, then fall back through a chain of public CORS proxies —
+  // any single free proxy can be flaky or overloaded, so try several before giving up.
+  const attempts = [
+    { label: 'direct', build: () => url },
+    { label: 'allorigins', build: () => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) },
+    { label: 'corsproxy.io', build: () => 'https://corsproxy.io/?url=' + encodeURIComponent(url) },
+    { label: 'codetabs', build: () => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url) }
+  ];
+  let lastErr = new Error('no attempts made');
+  for (const attempt of attempts) {
+    try {
+      const res = await fetch(attempt.build());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } catch (e) {
+      lastErr = new Error(attempt.label + ': ' + e.message);
+    }
   }
+  throw lastErr;
 }
 
 async function fetchADP() {
