@@ -106,7 +106,7 @@
 
   <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Draft board</p>
   <div id="board" style="max-height:340px; overflow-y:auto; border:0.5px solid var(--border); border-radius:var(--radius);"></div>
-  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Base rankings pulled Jul 21, 2026. Click <i class="ti ti-refresh"></i> above to pull current ADP from Fantasy Football Calculator (Standard, 8-team, matching this league's scoring), plus depth chart position and rookie status from Sleeper. Badges: e.g. "RB2" = second on that team's depth chart, "R" = rookie (no NFL experience). Note: this league awards 6 pts per passing TD (not the usual 4), which no free ADP source models — value QBs higher than the list suggests. Live draft: Sat., Aug 29, 2026, 5:00 PM CDT, snake, 90 sec/pick.</p>
+  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Rankings blend two data sets. The "+X.X pts" value on each player is Value Over Replacement computed from their actual 2025 stats run through THIS league's exact scoring (0 PPR, 6pt passing TDs, our real roster settings) — this is what actually decides the sort order and the Recommended pick. Live ADP (refreshed via <i class="ti ti-refresh"></i>, Fantasy Football Calculator) is layered on top only to flag "won't last" — players our formula likes who the broader market will likely draft before your next turn. Depth chart position and rookie status come from Sleeper. Limitations: the custom scoring can't account for interceptions thrown, 2pt conversions, or single-game yardage/TD-length bonuses (needs game logs we don't have access to), and it's based on last season's production, not a 2026 forecast — so trust it as a strong guide, not gospel, especially for rookies and players in new situations. Live draft: Sat., Aug 29, 2026, 5:00 PM CDT, snake, 90 sec/pick.</p>
 </div>
 
 <script>
@@ -116,37 +116,46 @@ const YOU = "Dad";
 const TOTAL_ROUNDS = 16;
 const PICK_SECONDS = 90; // matches this league's real ESPN draft clock
 
+// Each player carries two independent value signals:
+//   s   = live market ADP score (1000 - Average Draft Position), refreshed from Fantasy Football
+//         Calculator. Reflects what OTHER leagues' drafters (mostly generic scoring) are doing.
+//   vor = Value Over Replacement under THIS league's exact scoring (0 PPR, 6pt passing TD, etc.),
+//         computed from each player's actual 2025 stat line run through our real point formula,
+//         then compared to a replacement-level baseline at each position for our 8-team/
+//         QB1-RB2-WR2-TE1-FLEX1-DST1-K1 roster. This is the number that answers "how good is this
+//         player specifically in OUR league" — see the footer note for the full explanation.
 let players = [
-  {n:"Bijan Robinson",p:"RB",s:294.32},{n:"Jahmyr Gibbs",p:"RB",s:303.51},{n:"Jonathan Taylor",p:"RB",s:269.41},{n:"Christian McCaffrey",p:"RB",s:265.55},{n:"James Cook",p:"RB",s:241.72},
-  {n:"Ja'Marr Chase",p:"WR",s:216.32},{n:"Kenneth Walker III",p:"RB"},{n:"Puka Nacua",p:"WR",s:235.43},{n:"Jaxon Smith-Njigba",p:"WR",s:215.66},{n:"De'Von Achane",p:"RB",s:233.48},
-  {n:"Ashton Jeanty",p:"RB",s:219.95},{n:"Omarion Hampton",p:"RB"},{n:"Saquon Barkley",p:"RB",s:225.91},{n:"CeeDee Lamb",p:"WR",s:176.06},{n:"Jeremiyah Love",p:"RB"},
-  {n:"Amon-Ra St. Brown",p:"WR",s:203.17},{n:"Chase Brown",p:"RB"},{n:"Justin Jefferson",p:"WR",s:171.48},{n:"Drake London",p:"WR",s:189.3},{n:"Josh Jacobs",p:"RB",s:223.72},
-  {n:"Trey McBride",p:"TE",s:147.94},{n:"Bucky Irving",p:"RB"},{n:"Malik Nabers",p:"WR"},{n:"Derrick Henry",p:"RB",s:258.62},{n:"Kyren Williams",p:"RB"},
-  {n:"Nico Collins",p:"WR"},{n:"Breece Hall",p:"RB"},{n:"George Pickens",p:"WR",s:170.64},{n:"Travis Etienne",p:"RB"},{n:"Brock Bowers",p:"TE",s:147.57},
-  {n:"Josh Allen",p:"QB",s:423.85},{n:"Chris Olave",p:"WR"},{n:"Javonte Williams",p:"RB"},{n:"A.J. Brown",p:"WR",s:169.03},{n:"Rashee Rice",p:"WR",s:176.07},
-  {n:"Tee Higgins",p:"WR"},{n:"TreVeyon Henderson",p:"RB"},{n:"Tetairoa McMillan",p:"WR"},{n:"Garrett Wilson",p:"WR"},{n:"Luther Burden III",p:"WR"},
-  {n:"RJ Harvey",p:"RB"},{n:"Lamar Jackson",p:"QB",s:379.78},{n:"Cameron Skattebo",p:"RB"},{n:"Jaylen Waddle",p:"WR"},{n:"Bhayshul Tuten",p:"RB"},
-  {n:"Quinshon Judkins",p:"RB"},{n:"Davante Adams",p:"WR"},{n:"Ladd McConkey",p:"WR"},{n:"D'Andre Swift",p:"RB"},{n:"David Montgomery",p:"RB"},
-  {n:"Colston Loveland",p:"TE",s:131.78},{n:"Drake Maye",p:"QB",s:384.26},{n:"Zay Flowers",p:"WR"},{n:"Jaylen Warren",p:"RB"},{n:"Jameson Williams",p:"WR"},
-  {n:"DeVonta Smith",p:"WR"},{n:"Emeka Egbuka",p:"WR"},{n:"Terry McLaurin",p:"WR"},{n:"Tyler Warren",p:"TE",s:119.45},{n:"Rhamondre Stevenson",p:"RB"},
-  {n:"D.J. Moore",p:"WR"},{n:"Mike Evans",p:"WR"},{n:"Joe Burrow",p:"QB",s:369.69},{n:"Carnell Tate",p:"WR"},{n:"Kyle Monangai",p:"RB"},
-  {n:"Harold Fannin Jr.",p:"TE",s:113.94},{n:"Tony Pollard",p:"RB"},{n:"Christian Watson",p:"WR"},{n:"Rico Dowdle",p:"RB"},{n:"Jayden Daniels",p:"QB",s:367.23},
-  {n:"Chuba Hubbard",p:"RB"},{n:"Rome Odunze",p:"WR"},{n:"Blake Corum",p:"RB"},{n:"Jalen Hurts",p:"QB",s:369.76},{n:"Jordyn Tyson",p:"WR"},
-  {n:"Tucker Kraft",p:"TE",s:113.36},{n:"Courtland Sutton",p:"WR"},{n:"Kyle Pitts",p:"TE",s:116.38},{n:"D.K. Metcalf",p:"WR"},{n:"J.K. Dobbins",p:"RB"},
-  {n:"Michael Wilson",p:"WR"},{n:"Makai Lemon",p:"WR"},{n:"Jakobi Meyers",p:"WR"},{n:"Brian Thomas Jr.",p:"WR"},{n:"Sam LaPorta",p:"TE",s:113.92},
-  {n:"Brian Robinson Jr.",p:"RB"},{n:"Dalton Kincaid",p:"TE"},{n:"Marvin Harrison Jr.",p:"WR"},{n:"Oronde Gadsden II",p:"TE"},{n:"Jaxson Dart",p:"QB",s:351.06},
-  {n:"Aaron Jones",p:"RB"},{n:"Ricky Pearsall",p:"WR"},{n:"Kenneth Gainwell",p:"RB"},{n:"Justin Herbert",p:"QB"},{n:"Alec Pierce",p:"WR"},
-  {n:"Chris Godwin",p:"WR"},{n:"Tyler Allgeier",p:"RB"},{n:"Parker Washington",p:"WR"},{n:"Caleb Williams",p:"QB"},{n:"Hunter Henry",p:"TE"},
-  {n:"James Conner",p:"RB"},{n:"Dallas Goedert",p:"TE",s:113.87},{n:"Trevor Lawrence",p:"QB",s:350.83},{n:"Jacory Croskey-Merritt",p:"RB"},{n:"Mark Andrews",p:"TE"},
-  {n:"Jake Ferguson",p:"TE"},{n:"Dalton Schultz",p:"TE"},{n:"Dak Prescott",p:"QB",s:362.09},{n:"Jordan Addison",p:"WR"},{n:"George Kittle",p:"TE"},
-  {n:"Zach Charbonnet",p:"RB"},{n:"Jadarian Price",p:"RB"},{n:"Patrick Mahomes",p:"QB"},{n:"Juwan Johnson",p:"TE"},{n:"Brenton Strange",p:"TE"},
-  {n:"Woody Marks",p:"RB"},{n:"Wan'Dale Robinson",p:"WR"},{n:"Travis Kelce",p:"TE",s:109.64},{n:"Brock Purdy",p:"QB",s:356.21},{n:"Michael Pittman Jr.",p:"WR"},
-  {n:"Kenyon Sadiq",p:"TE"},{n:"Tyrone Tracy Jr.",p:"RB"},{n:"Quentin Johnston",p:"WR"},{n:"Jordan Mason",p:"RB"},{n:"Emmett Johnson",p:"RB"},
-  {n:"Isaiah Likely",p:"TE"},{n:"Trey Benson",p:"RB"},{n:"Stefon Diggs",p:"WR"},{n:"Romeo Doubs",p:"WR"},{n:"Jonah Coleman",p:"RB"},
-  {n:"Matthew Stafford",p:"QB"},{n:"Jayden Reed",p:"WR"},{n:"Alvin Kamara",p:"RB"},{n:"Khalil Shakir",p:"WR"},{n:"Bo Nix",p:"QB"},
-  {n:"Xavier Worthy",p:"WR"},{n:"Tyjae Spears",p:"RB"},{n:"Jauan Jennings",p:"WR"},{n:"Rachaad White",p:"RB"},{n:"AJ Barner",p:"TE"},
-  {n:"Brandon Aubrey",p:"K"},{n:"Cameron Dicker",p:"K"},{n:"Ka'imi Fairbairn",p:"K"},{n:"Jason Myers",p:"K"},{n:"Evan McPherson",p:"K"},{n:"Chase McLaughlin",p:"K"},{n:"Cam Little",p:"K"},{n:"Chris Boswell",p:"K"},
-  {n:"Pittsburgh Steelers",p:"DST"},{n:"Los Angeles Chargers",p:"DST"},{n:"Denver Broncos",p:"DST"},{n:"Seattle Seahawks",p:"DST"},{n:"Jacksonville Jaguars",p:"DST"},{n:"Houston Texans",p:"DST"},{n:"Los Angeles Rams",p:"DST"},{n:"Baltimore Ravens",p:"DST"}
+  {n:"Bijan Robinson",p:"RB",s:294.32,vor:7.21},{n:"Jahmyr Gibbs",p:"RB",s:303.51,vor:6.98},{n:"Jonathan Taylor",p:"RB",s:269.41,vor:8.42},{n:"Christian McCaffrey",p:"RB",s:265.55,vor:8.32},{n:"James Cook",p:"RB",s:241.72,vor:6},
+  {n:"Ja'Marr Chase",p:"WR",s:216.32,vor:3.47},{n:"Kenneth Walker III",p:"RB",vor:-0.73},{n:"Puka Nacua",p:"WR",s:235.43,vor:7.06},{n:"Jaxon Smith-Njigba",p:"WR",s:215.66,vor:5.85},{n:"De'Von Achane",p:"RB",s:233.48,vor:5.8},
+  {n:"Ashton Jeanty",p:"RB",s:219.95,vor:1.11},{n:"Omarion Hampton",p:"RB",vor:1.33},{n:"Saquon Barkley",p:"RB",s:225.91,vor:2.02},{n:"CeeDee Lamb",p:"WR",s:176.06,vor:1.24},{n:"Jeremiyah Love",p:"RB"},
+  {n:"Amon-Ra St. Brown",p:"WR",s:203.17,vor:3.74},{n:"Chase Brown",p:"RB",vor:2.26},{n:"Justin Jefferson",p:"WR",s:171.48,vor:-1.53},{n:"Drake London",p:"WR",s:189.3,vor:2.72},{n:"Josh Jacobs",p:"RB",s:223.72,vor:3.48},
+  {n:"Trey McBride",p:"TE",s:147.94,vor:4.39},{n:"Bucky Irving",p:"RB",vor:0.86},{n:"Malik Nabers",p:"WR",vor:1.34},{n:"Derrick Henry",p:"RB",s:258.62,vor:5.72},{n:"Kyren Williams",p:"RB",vor:3.42},
+  {n:"Nico Collins",p:"WR",vor:1.91},{n:"Breece Hall",p:"RB",vor:0.53},{n:"George Pickens",p:"WR",s:170.64,vor:3.14},{n:"Travis Etienne",p:"RB",vor:2.63},{n:"Brock Bowers",p:"TE",s:147.57,vor:2.4},
+  {n:"Josh Allen",p:"QB",s:423.85,vor:4.36},{n:"Chris Olave",p:"WR",vor:2.19},{n:"Javonte Williams",p:"RB",vor:3.05},{n:"A.J. Brown",p:"WR",s:169.03,vor:1.05},{n:"Rashee Rice",p:"WR",s:176.07,vor:3.45},
+  {n:"Tee Higgins",p:"WR",vor:1.6},{n:"TreVeyon Henderson",p:"RB",vor:0},{n:"Tetairoa McMillan",p:"WR",vor:0},{n:"Garrett Wilson",p:"WR",vor:0.63},{n:"Luther Burden III",p:"WR",vor:-3.05},
+  {n:"RJ Harvey",p:"RB",vor:-0.68},{n:"Lamar Jackson",p:"QB",s:379.78,vor:-1.91},{n:"Cameron Skattebo",p:"RB",vor:2.77},{n:"Jaylen Waddle",p:"WR",vor:-0.33},{n:"Bhayshul Tuten",p:"RB",vor:-4.82},
+  {n:"Quinshon Judkins",p:"RB",vor:-0.06},{n:"Davante Adams",p:"WR",vor:3.2},{n:"Ladd McConkey",p:"WR",vor:-1.26},{n:"D'Andre Swift",p:"RB",vor:2.22},{n:"David Montgomery",p:"RB",vor:-2.03},
+  {n:"Colston Loveland",p:"TE",s:131.78,vor:-0.09},{n:"Drake Maye",p:"QB",s:384.26,vor:2.3},{n:"Zay Flowers",p:"WR",vor:1.17},{n:"Jaylen Warren",p:"RB",vor:0.88},{n:"Jameson Williams",p:"WR",vor:0.67},
+  {n:"DeVonta Smith",p:"WR",vor:-1.1},{n:"Emeka Egbuka",p:"WR",vor:-0.75},{n:"Terry McLaurin",p:"WR",vor:-0.82},{n:"Tyler Warren",p:"TE",s:119.45,vor:-0.16},{n:"Rhamondre Stevenson",p:"RB",vor:0.44},
+  {n:"D.J. Moore",p:"WR",vor:-1.49},{n:"Mike Evans",p:"WR",vor:-1.59},{n:"Joe Burrow",p:"QB",s:369.69,vor:-0.74},{n:"Carnell Tate",p:"WR"},{n:"Kyle Monangai",p:"RB",vor:-2.85},
+  {n:"Harold Fannin Jr.",p:"TE",s:113.94,vor:0.5},{n:"Tony Pollard",p:"RB",vor:-0.85},{n:"Christian Watson",p:"WR",vor:1.3},{n:"Rico Dowdle",p:"RB",vor:0.36},{n:"Jayden Daniels",p:"QB",s:367.23,vor:-3.3},
+  {n:"Chuba Hubbard",p:"RB",vor:-3.7},{n:"Rome Odunze",p:"WR",vor:0.07},{n:"Blake Corum",p:"RB",vor:-3.47},{n:"Jalen Hurts",p:"QB",s:369.76,vor:0.02},{n:"Jordyn Tyson",p:"WR"},
+  {n:"Tucker Kraft",p:"TE",s:113.36,vor:3.87},{n:"Courtland Sutton",p:"WR",vor:0.01},{n:"Kyle Pitts",p:"TE",s:116.38,vor:0.44},{n:"D.K. Metcalf",p:"WR",vor:0.11},{n:"J.K. Dobbins",p:"RB",vor:0.3},
+  {n:"Michael Wilson",p:"WR",vor:-0.05},{n:"Makai Lemon",p:"WR"},{n:"Jakobi Meyers",p:"WR",vor:-2.01},{n:"Brian Thomas Jr.",p:"WR",vor:-1.95},{n:"Sam LaPorta",p:"TE",s:113.92,vor:0.65},
+  {n:"Brian Robinson Jr.",p:"RB"},{n:"Dalton Kincaid",p:"TE",vor:0.48},{n:"Marvin Harrison Jr.",p:"WR",vor:-1.37},{n:"Oronde Gadsden II",p:"TE",vor:-1.15},{n:"Jaxson Dart",p:"QB",s:351.06,vor:-2.79},
+  {n:"Aaron Jones",p:"RB",vor:-2.46},{n:"Ricky Pearsall",p:"WR",vor:-2.57},{n:"Kenneth Gainwell",p:"RB",vor:-1.35},{n:"Justin Herbert",p:"QB",vor:-0.12},{n:"Alec Pierce",p:"WR",vor:0.65},
+  {n:"Chris Godwin",p:"WR",vor:-3.11},{n:"Tyler Allgeier",p:"RB",vor:-3.78},{n:"Parker Washington",p:"WR",vor:-0.79},{n:"Caleb Williams",p:"QB",vor:-0.42},{n:"Hunter Henry",p:"TE",vor:0.21},
+  {n:"James Conner",p:"RB"},{n:"Dallas Goedert",p:"TE",s:113.87,vor:1.56},{n:"Trevor Lawrence",p:"QB",s:350.83,vor:1.9},{n:"Jacory Croskey-Merritt",p:"RB",vor:-2.23},{n:"Mark Andrews",p:"TE",vor:-1.9},
+  {n:"Jake Ferguson",p:"TE",vor:-0.42},{n:"Dalton Schultz",p:"TE",vor:-1.15},{n:"Dak Prescott",p:"QB",s:362.09,vor:0},{n:"Jordan Addison",p:"WR",vor:-1.79},{n:"George Kittle",p:"TE",vor:2.72},
+  {n:"Zach Charbonnet",p:"RB",vor:-0.23},{n:"Jadarian Price",p:"RB"},{n:"Patrick Mahomes",p:"QB",vor:1.78},{n:"Juwan Johnson",p:"TE",vor:-0.49},{n:"Brenton Strange",p:"TE",vor:-0.78},
+  {n:"Woody Marks",p:"RB",vor:-2.62},{n:"Wan'Dale Robinson",p:"WR",vor:-0.57},{n:"Travis Kelce",p:"TE",s:109.64,vor:0},{n:"Brock Purdy",p:"QB",s:356.21,vor:3.55},{n:"Michael Pittman Jr.",p:"WR",vor:-1.36},
+  {n:"Kenyon Sadiq",p:"TE"},{n:"Tyrone Tracy Jr.",p:"RB",vor:-1.74},{n:"Quentin Johnston",p:"WR",vor:0.96},{n:"Jordan Mason",p:"RB",vor:-2.88},{n:"Emmett Johnson",p:"RB"},
+  {n:"Isaiah Likely",p:"TE"},{n:"Trey Benson",p:"RB",vor:-4.59},{n:"Stefon Diggs",p:"WR",vor:-1.07},{n:"Romeo Doubs",p:"WR",vor:-1.66},{n:"Jonah Coleman",p:"RB"},
+  {n:"Matthew Stafford",p:"QB",vor:4.27},{n:"Jayden Reed",p:"WR",vor:-2.54},{n:"Alvin Kamara",p:"RB",vor:-3.67},{n:"Khalil Shakir",p:"WR",vor:-2.41},{n:"Bo Nix",p:"QB",vor:-1.12},
+  {n:"Xavier Worthy",p:"WR"},{n:"Tyjae Spears",p:"RB",vor:-5.06},{n:"Jauan Jennings",p:"WR",vor:-0.55},{n:"Rachaad White",p:"RB",vor:-4.13},{n:"AJ Barner",p:"TE",vor:-1.17},
+  {n:"Brandon Aubrey",p:"K",vor:0.97},{n:"Cameron Dicker",p:"K",vor:-0.22},{n:"Ka'imi Fairbairn",p:"K",vor:2.9},{n:"Jason Myers",p:"K",vor:1.81},{n:"Evan McPherson",p:"K",vor:-1.44},{n:"Chase McLaughlin",p:"K",vor:-0.76},{n:"Cam Little",p:"K",vor:-0.55},{n:"Chris Boswell",p:"K",vor:-1.51},
+  {n:"Pittsburgh Steelers",p:"DST",vor:-0.3},{n:"Los Angeles Chargers",p:"DST",vor:-0.8},{n:"Denver Broncos",p:"DST",vor:1},{n:"Seattle Seahawks",p:"DST",vor:2.1},{n:"Jacksonville Jaguars",p:"DST",vor:1},{n:"Houston Texans",p:"DST",vor:1},{n:"Los Angeles Rams",p:"DST",vor:0.4},{n:"Baltimore Ravens",p:"DST"},
+  {n:"Spencer Shrader",p:"K",vor:1.67},{n:"Darren Waller",p:"TE",vor:1.31},{n:"Zane Gonzalez",p:"K",vor:0.39},{n:"Philadelphia Eagles",p:"DST",vor:0.3},{n:"Jake Moody",p:"K",vor:0.06},{n:"Will Reichard",p:"K",vor:0.04},{n:"Charlie Smyth",p:"K",vor:0},{n:"Cleveland Browns",p:"DST",vor:0},{n:"Minnesota Vikings",p:"DST",vor:0},{n:"Jared Goff",p:"QB",vor:-0.05},{n:"New England Patriots",p:"DST",vor:-0.1}
 ];
 
 const STORAGE_KEY = 'rfl-draft-2026-v2';
@@ -371,9 +380,13 @@ function renderTurn() {
   const isYou = team === YOU;
   let line = '<i class="ti ti-ball-american-football"></i> Round ' + round + ', pick ' + overall + ' — ' + (isYou ? 'your turn (Dad)' : team + "'s turn");
   if (isYou) {
-    const best = bestAvailable();
-    if (best) {
-      line += ' — <strong>Recommended: ' + best.n + ' (' + best.p + ')</strong>';
+    const rec = bestAvailable();
+    if (rec) {
+      const p = rec.player;
+      line += ' — <strong>Recommended: ' + p.n + ' (' + p.p + ')</strong>';
+      if (rec.urgent) {
+        line += ' <span style="font-weight:400; font-size:13px;">— best value in our scoring, and ADP says he likely won\'t last to pick ' + rec.nextTurn + '</span>';
+      }
     }
   }
   textEl.innerHTML = line;
@@ -388,31 +401,66 @@ function renderRoster() {
   ).join('') : '<span style="font-size:13px; color:var(--text-muted);">No picks yet</span>';
 }
 
+// Rank primarily by VOR (our league's exact scoring, value over replacement) since that's the
+// truest measure of a player's worth in THIS league. Players without a computed VOR (mostly
+// rookies with no 2025 stats, or deep bench players outside our data pull) fall back to live
+// ADP so they still sort sensibly relative to each other, below the VOR-ranked group.
+function playerValue(pl) {
+  if (pl.vor != null) return { tier: 2, val: pl.vor };
+  if (pl.s != null) return { tier: 1, val: pl.s };
+  return { tier: 0, val: 0 };
+}
+
 function rankedPool(filter) {
   let pool;
   if (filter === 'ALL') pool = players.slice();
   else if (filter === 'FLEX') pool = players.filter(pl => pl.p === 'RB' || pl.p === 'WR' || pl.p === 'TE');
   else pool = players.filter(pl => pl.p === filter);
-  const scored = pool.filter(pl => pl.s != null).sort((a, b) => b.s - a.s);
-  const unscored = pool.filter(pl => pl.s == null);
-  return scored.concat(unscored).slice(0, 8);
+  pool.sort((a, b) => {
+    const va = playerValue(a), vb = playerValue(b);
+    if (va.tier !== vb.tier) return vb.tier - va.tier;
+    return vb.val - va.val;
+  });
+  return pool.slice(0, 8);
 }
 
+// Snake-draft math: the next overall pick number at which YOU pick again, after `afterOverall`.
+function nextOwnPick(afterOverall) {
+  const maxPick = teams.length * TOTAL_ROUNDS;
+  let o = afterOverall + 1;
+  while (o <= maxPick && pickInfo(o).team !== YOU) o++;
+  return o;
+}
+
+// Combine both data sets: use our league's real VOR to build a short list of genuinely good
+// picks, then use live market ADP to decide WHICH of them to grab right now — prioritizing
+// whichever top-value player the market says probably won't survive until your next turn.
 function bestAvailable() {
-  return rankedPool('ALL')[0] || null;
+  const overall = picks.length + 1;
+  const shortlist = rankedPool('ALL');
+  if (!shortlist.length) return null;
+  const nextTurn = nextOwnPick(overall);
+  const atRisk = shortlist.filter(pl => pl.adp != null && pl.adp <= nextTurn);
+  const pick = atRisk.length ? atRisk[0] : shortlist[0];
+  return { player: pick, urgent: atRisk.length > 0, nextTurn };
 }
 
 function renderAvailable() {
   const el = document.getElementById('available');
   const filter = document.getElementById('pos-filter').value;
   const top = rankedPool(filter);
-  el.innerHTML = top.length ? top.map((pl, i) =>
-    '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
+  const overall = picks.length + 1;
+  const nextTurn = nextOwnPick(overall);
+  el.innerHTML = top.length ? top.map((pl, i) => {
+    const urgent = pl.adp != null && pl.adp <= nextTurn;
+    return '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
+    (pl.vor != null ? ' <span style="color:var(--text-muted); font-size:11px;" title="Value over replacement under our league\'s exact scoring">' + (pl.vor >= 0 ? '+' : '') + pl.vor.toFixed(1) + ' pts</span>' : '') +
     (pl.depth ? ' <span class="pos-badge" style="background:var(--surface-1); color:var(--text-secondary);">' + pl.depth + '</span>' : '') +
     (pl.rookie ? ' <span class="pos-badge" style="background:var(--bg-accent); color:var(--text-accent);">R</span>' : '') +
     (pl.bye ? ' <span style="color:var(--text-muted); font-size:11px;">bye ' + pl.bye + '</span>' : '') +
-    '</div>'
-  ).join('') : '<div style="color:var(--text-muted);">None left</div>';
+    (urgent ? ' <span style="color:#E24B4A; font-size:11px;" title="ADP suggests he probably won\'t be here at your next pick">won\'t last</span>' : '') +
+    '</div>';
+  }).join('') : '<div style="color:var(--text-muted);">None left</div>';
 }
 
 function renderBoard() {
