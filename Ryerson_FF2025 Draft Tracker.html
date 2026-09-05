@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Ryerson_FF2025 Draft Tracker</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.47.0/iconfont/tabler-icons.min.css">
+<style>
+  :root{
+    --surface-2:#ffffff; --surface-1:#f5f4f0; --surface-0:#efeee8;
+    --text-primary:#111111; --text-secondary:#5f5e5a; --text-muted:#888780;
+    --border:#e2e0d8; --border-strong:#c9c7bd;
+    --bg-accent:#e6f1fb; --text-accent:#0c447c; --border-accent:#378add;
+    --radius:8px; --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-2:#1c1c1a; --surface-1:#242422; --surface-0:#161615;
+      --text-primary:#f1efe8; --text-secondary:#b4b2a9; --text-muted:#888780;
+      --border:#3a3934; --border-strong:#4a4941;
+      --bg-accent:#0c447c; --text-accent:#b5d4f4; --border-accent:#378add;
+    }
+  }
+  html,body{background:var(--surface-0); color:var(--text-primary); font-family:var(--font-sans); margin:0; padding:24px;}
+  .wrap{max-width:720px; margin:0 auto; background:var(--surface-2); border:0.5px solid var(--border); border-radius:12px; padding:1.5rem 1.75rem;}
+  h1{font-size:20px; font-weight:500; margin:0 0 1.25rem; display:flex; align-items:center; gap:8px;}
+  input, select, button{font-family:inherit; font-size:14px; border-radius:var(--radius); border:0.5px solid var(--border-strong); background:var(--surface-2); color:var(--text-primary); height:36px; padding:0 10px;}
+  button{cursor:pointer;}
+  button:hover{background:var(--surface-1);}
+  button:active{transform:scale(0.98);}
+  .team-amber{background:#FAEEDA;color:#412402;border-left:3px solid #BA7517;border-radius:0}
+  .team-pink{background:#FBEAF0;color:#4B1528;border-left:3px solid #D4537E;border-radius:0}
+  .team-teal{background:#E1F5EE;color:#04342C;border-left:3px solid #1D9E75;border-radius:0}
+  .team-coral{background:#FAECE7;color:#4A1B0C;border-left:3px solid #D85A30;border-radius:0}
+  .team-purple{background:#EEEDFE;color:#26215C;border-left:3px solid #7F77DD;border-radius:0}
+  .team-green{background:#EAF3DE;color:#173404;border-left:3px solid #639922;border-radius:0}
+  .team-red{background:#FCEBEB;color:#501313;border-left:3px solid #E24B4A;border-radius:0}
+  .team-accent{background:var(--bg-accent);color:var(--text-accent);border-left:3px solid var(--border-accent);border-radius:0}
+  .team-blue{background:#E6F0FB;color:#0B2A4A;border-left:3px solid #3B7DD8;border-radius:0}
+  .team-gray{background:#EDECE8;color:#2C2C2A;border-left:3px solid #8B897E;border-radius:0}
+  @media (prefers-color-scheme: dark){
+    .team-amber{background:#633806;color:#FAEEDA;border-left-color:#EF9F27}
+    .team-pink{background:#72243E;color:#FBEAF0;border-left-color:#ED93B1}
+    .team-teal{background:#085041;color:#E1F5EE;border-left-color:#5DCAA5}
+    .team-coral{background:#712B13;color:#FAECE7;border-left-color:#F0997B}
+    .team-purple{background:#3C3489;color:#EEEDFE;border-left-color:#AFA9EC}
+    .team-green{background:#27500A;color:#EAF3DE;border-left-color:#97C459}
+    .team-red{background:#791F1F;color:#FCEBEB;border-left-color:#F09595}
+    .team-blue{background:#123A61;color:#E6F0FB;border-left-color:#7CAEEA}
+    .team-gray{background:#3E3D38;color:#EDECE8;border-left-color:#B4B2A9}
+  }
+  .pos-badge{font-size:11px;padding:1px 7px;border-radius:var(--radius)}
+  .pos-QB{background:var(--bg-accent);color:var(--text-accent)}
+  .pos-RB{background:#FAECE7;color:#4A1B0C}
+  .pos-WR{background:#E1F5EE;color:#04342C}
+  .pos-TE{background:#EEEDFE;color:#26215C}
+  .pos-K{background:#FAEEDA;color:#412402}
+  .pos-DST{background:#F1EFE8;color:#2C2C2A}
+  @media (prefers-color-scheme: dark){
+    .pos-RB{background:#712B13;color:#FAECE7}
+    .pos-WR{background:#085041;color:#E1F5EE}
+    .pos-TE{background:#3C3489;color:#EEEDFE}
+    .pos-K{background:#633806;color:#FAEEDA}
+    .pos-DST{background:#444441;color:#F1EFE8}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1><i class="ti ti-ball-american-football"></i> Ryerson_FF2025 — Draft Tracker</h1>
+
+  <div style="display:flex; gap:8px; margin:0 0 1rem;">
+    <input id="pick-input" type="text" placeholder="Player name just picked" style="flex:1;" />
+    <button id="add-btn">Add pick</button>
+    <button id="undo-btn" title="Undo last pick"><i class="ti ti-arrow-back-up"></i></button>
+    <button id="reset-btn" title="Reset draft"><i class="ti ti-trash"></i></button>
+  </div>
+  <p id="save-status" style="font-size:11px; color:var(--text-muted); margin:-0.75rem 0 1rem;">&nbsp;</p>
+
+  <div id="turn-banner" style="border-radius:var(--radius); padding:12px 16px; margin:0 0 1.5rem; font-size:15px; font-weight:500; display:flex; align-items:center; justify-content:space-between; gap:8px;">
+    <span id="turn-text"></span>
+    <span id="pick-timer" style="font-variant-numeric:tabular-nums; font-weight:600;"></span>
+  </div>
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:0 0 1.5rem;">
+    <div>
+      <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Your roster (Brian Ryerson)</p>
+      <div id="roster" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+    </div>
+    <div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin:0 0 8px; gap:8px;">
+        <p style="font-size:13px; color:var(--text-secondary); margin:0;">Top available</p>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button id="refresh-btn" title="Refresh live ADP rankings" style="height:28px; padding:0 8px; font-size:12px;"><i class="ti ti-refresh"></i></button>
+          <select id="pos-filter" style="font-size:13px; height:28px; padding:0 6px;">
+            <option value="ALL">All positions</option>
+            <option value="QB">QB</option>
+            <option value="RB">RB</option>
+            <option value="WR">WR</option>
+            <option value="TE">TE</option>
+            <option value="FLEX">Flex (RB/WR/TE)</option>
+            <option value="K">K</option>
+            <option value="DST">DST</option>
+          </select>
+        </div>
+      </div>
+      <p id="rankings-status" style="font-size:11px; color:var(--text-muted); margin:0 0 8px;">&nbsp;</p>
+      <div id="available" style="font-size:13px; line-height:2;"></div>
+    </div>
+  </div>
+
+  <p style="font-size:13px; color:var(--text-secondary); margin:0 0 8px;">Draft board</p>
+  <div id="board" style="max-height:340px; overflow-y:auto; border:0.5px solid var(--border); border-radius:var(--radius);"></div>
+  <p style="font-size:11px; color:var(--text-muted); margin:1rem 0 0;">Rankings blend two data sets. The "+X.X pts" value on each player is Value Over Replacement computed from their actual 2025 stats run through THIS league's exact scoring (0 PPR, 6pt passing TDs, 10-team QB1/RB2/WR2/TE1/FLEX1/DST1/K1 roster) — this is what actually decides the sort order and the Recommended pick. Live ADP (refreshed via <i class="ti ti-refresh"></i>, Fantasy Football Calculator) is layered on top only to flag "won't last" — players our formula likes who the broader market will likely draft before your next turn. Depth chart position, rookie status, and NFL team come from Sleeper. Limitations: this league docks -4 per interception thrown (double the usual), but our data source doesn't include INT counts, so turnover-prone QBs are likely overvalued here — sanity-check QBs manually. The scoring also can't account for 2pt conversions or single-game yardage/TD-length bonuses (needs game logs we don't have), and it's based on last season's production, not a 2026 forecast. Live draft: Sat., Sep 5, 2026, 6:00 PM CDT, snake, 90 sec/pick, 10 teams, 17 rounds.</p>
+</div>
+
+<script>
+const teams = ["Jake Winger","Dylan Ryerson","Brian Ryerson","Tyler Bundy","Dean Ryerson","Chad Ryerson","Saquon my name","Landon Moutray","K-Dawg","Nathan Ryerson"];
+const teamClass = ["team-amber","team-pink","team-teal","team-coral","team-purple","team-green","team-accent","team-red","team-blue","team-gray"];
+const YOU = "Brian Ryerson";
+const TOTAL_ROUNDS = 17;
+const PICK_SECONDS = 90; // matches this league's real ESPN draft clock
+
+// Each player carries two independent value signals:
+//   s   = live market ADP score (1000 - Average Draft Position), refreshed from Fantasy Football
+//         Calculator. Reflects what OTHER leagues' drafters (mostly generic scoring) are doing.
+//   vor = Value Over Replacement under THIS league's exact scoring (0 PPR, 6pt passing TD, etc.),
+//         computed from each player's actual 2025 stat line run through our real point formula,
+//         then compared to a replacement-level baseline at each position for a 10-team
+//         QB1-RB2-WR2-TE1-FLEX1-DST1-K1 roster. This is the number that answers "how good is
+//         this player specifically in THIS league" — see the footer note for the full explanation.
+let players = [
+  {n:"Bijan Robinson",p:"RB",s:294.32,vor:8.56},{n:"Jahmyr Gibbs",p:"RB",s:303.51,vor:8.33},{n:"Jonathan Taylor",p:"RB",s:269.41,vor:9.77},{n:"Christian McCaffrey",p:"RB",s:265.55,vor:9.67},{n:"James Cook",p:"RB",s:241.72,vor:7.35},
+  {n:"Ja'Marr Chase",p:"WR",s:216.32,vor:4.22},{n:"Kenneth Walker III",p:"RB",vor:0.62},{n:"Puka Nacua",p:"WR",s:235.43,vor:7.81},{n:"Jaxon Smith-Njigba",p:"WR",s:215.66,vor:6.6},{n:"De'Von Achane",p:"RB",s:233.48,vor:7.15},
+  {n:"Ashton Jeanty",p:"RB",s:219.95,vor:2.46},{n:"Omarion Hampton",p:"RB",vor:2.68},{n:"Saquon Barkley",p:"RB",s:225.91,vor:3.37},{n:"CeeDee Lamb",p:"WR",s:176.06,vor:1.99},{n:"Jeremiyah Love",p:"RB"},
+  {n:"Amon-Ra St. Brown",p:"WR",s:203.17,vor:4.49},{n:"Chase Brown",p:"RB",vor:3.61},{n:"Justin Jefferson",p:"WR",s:171.48,vor:-0.78},{n:"Drake London",p:"WR",s:189.3,vor:3.47},{n:"Josh Jacobs",p:"RB",s:223.72,vor:4.83},
+  {n:"Trey McBride",p:"TE",s:147.94,vor:4.58},{n:"Bucky Irving",p:"RB",vor:2.21},{n:"Malik Nabers",p:"WR",vor:2.09},{n:"Derrick Henry",p:"RB",s:258.62,vor:7.07},{n:"Kyren Williams",p:"RB",vor:4.77},
+  {n:"Nico Collins",p:"WR",vor:2.66},{n:"Breece Hall",p:"RB",vor:1.88},{n:"George Pickens",p:"WR",s:170.64,vor:3.89},{n:"Travis Etienne",p:"RB",vor:3.98},{n:"Brock Bowers",p:"TE",s:147.57,vor:2.59},
+  {n:"Josh Allen",p:"QB",s:423.85,vor:4.48},{n:"Chris Olave",p:"WR",vor:2.94},{n:"Javonte Williams",p:"RB",vor:4.4},{n:"A.J. Brown",p:"WR",s:169.03,vor:1.8},{n:"Rashee Rice",p:"WR",s:176.07,vor:4.2},
+  {n:"Tee Higgins",p:"WR",vor:2.35},{n:"TreVeyon Henderson",p:"RB",vor:1.35},{n:"Tetairoa McMillan",p:"WR",vor:0.75},{n:"Garrett Wilson",p:"WR",vor:1.38},{n:"Luther Burden III",p:"WR",vor:-2.3},
+  {n:"RJ Harvey",p:"RB",vor:0.67},{n:"Lamar Jackson",p:"QB",s:379.78,vor:-1.79},{n:"Cameron Skattebo",p:"RB",vor:4.12},{n:"Jaylen Waddle",p:"WR",vor:0.42},{n:"Bhayshul Tuten",p:"RB",vor:-3.47},
+  {n:"Quinshon Judkins",p:"RB",vor:1.29},{n:"Davante Adams",p:"WR",vor:3.95},{n:"Ladd McConkey",p:"WR",vor:-0.51},{n:"D'Andre Swift",p:"RB",vor:3.57},{n:"David Montgomery",p:"RB",vor:-0.68},
+  {n:"Colston Loveland",p:"TE",s:131.78,vor:0.1},{n:"Drake Maye",p:"QB",s:384.26,vor:2.42},{n:"Zay Flowers",p:"WR",vor:1.92},{n:"Jaylen Warren",p:"RB",vor:2.23},{n:"Jameson Williams",p:"WR",vor:1.42},
+  {n:"DeVonta Smith",p:"WR",vor:-0.35},{n:"Emeka Egbuka",p:"WR",vor:0},{n:"Terry McLaurin",p:"WR",vor:-0.07},{n:"Tyler Warren",p:"TE",s:119.45,vor:0.03},{n:"Rhamondre Stevenson",p:"RB",vor:1.79},
+  {n:"D.J. Moore",p:"WR",vor:-0.74},{n:"Mike Evans",p:"WR",vor:-0.84},{n:"Joe Burrow",p:"QB",s:369.69,vor:-0.62},{n:"Carnell Tate",p:"WR"},{n:"Kyle Monangai",p:"RB",vor:-1.5},
+  {n:"Harold Fannin Jr.",p:"TE",s:113.94,vor:0.69},{n:"Tony Pollard",p:"RB",vor:0.5},{n:"Christian Watson",p:"WR",vor:2.05},{n:"Rico Dowdle",p:"RB",vor:1.71},{n:"Jayden Daniels",p:"QB",s:367.23,vor:-3.18},
+  {n:"Chuba Hubbard",p:"RB",vor:-2.35},{n:"Rome Odunze",p:"WR",vor:0.82},{n:"Blake Corum",p:"RB",vor:-2.12},{n:"Jalen Hurts",p:"QB",s:369.76,vor:0.14},{n:"Jordyn Tyson",p:"WR"},
+  {n:"Tucker Kraft",p:"TE",s:113.36,vor:4.06},{n:"Courtland Sutton",p:"WR",vor:0.76},{n:"Kyle Pitts",p:"TE",s:116.38,vor:0.63},{n:"D.K. Metcalf",p:"WR",vor:0.86},{n:"J.K. Dobbins",p:"RB",vor:1.65},
+  {n:"Michael Wilson",p:"WR",vor:0.7},{n:"Makai Lemon",p:"WR"},{n:"Jakobi Meyers",p:"WR",vor:-1.26},{n:"Brian Thomas Jr.",p:"WR",vor:-1.2},{n:"Sam LaPorta",p:"TE",s:113.92,vor:0.84},
+  {n:"Brian Robinson Jr.",p:"RB"},{n:"Dalton Kincaid",p:"TE",vor:0.67},{n:"Marvin Harrison Jr.",p:"WR",vor:-0.62},{n:"Oronde Gadsden II",p:"TE",vor:-0.96},{n:"Jaxson Dart",p:"QB",s:351.06,vor:-2.67},
+  {n:"Aaron Jones",p:"RB",vor:-1.11},{n:"Ricky Pearsall",p:"WR",vor:-1.82},{n:"Kenneth Gainwell",p:"RB",vor:0},{n:"Justin Herbert",p:"QB",vor:0},{n:"Alec Pierce",p:"WR",vor:1.4},
+  {n:"Chris Godwin",p:"WR",vor:-2.36},{n:"Tyler Allgeier",p:"RB",vor:-2.43},{n:"Parker Washington",p:"WR",vor:-0.04},{n:"Caleb Williams",p:"QB",vor:-0.3},{n:"Hunter Henry",p:"TE",vor:0.4},
+  {n:"James Conner",p:"RB"},{n:"Dallas Goedert",p:"TE",s:113.87,vor:1.75},{n:"Trevor Lawrence",p:"QB",s:350.83,vor:2.02},{n:"Jacory Croskey-Merritt",p:"RB",vor:-0.88},{n:"Mark Andrews",p:"TE",vor:-1.71},
+  {n:"Jake Ferguson",p:"TE",vor:-0.23},{n:"Dalton Schultz",p:"TE",vor:-0.96},{n:"Dak Prescott",p:"QB",s:362.09,vor:0.12},{n:"Jordan Addison",p:"WR",vor:-1.04},{n:"George Kittle",p:"TE",vor:2.91},
+  {n:"Zach Charbonnet",p:"RB",vor:1.12},{n:"Jadarian Price",p:"RB"},{n:"Patrick Mahomes",p:"QB",vor:1.9},{n:"Juwan Johnson",p:"TE",vor:-0.3},{n:"Brenton Strange",p:"TE",vor:-0.59},
+  {n:"Woody Marks",p:"RB",vor:-1.27},{n:"Wan'Dale Robinson",p:"WR",vor:0.18},{n:"Travis Kelce",p:"TE",s:109.64,vor:0.19},{n:"Brock Purdy",p:"QB",s:356.21,vor:3.67},{n:"Michael Pittman Jr.",p:"WR",vor:-0.61},
+  {n:"Kenyon Sadiq",p:"TE"},{n:"Tyrone Tracy Jr.",p:"RB",vor:-0.39},{n:"Quentin Johnston",p:"WR",vor:1.71},{n:"Jordan Mason",p:"RB",vor:-1.53},{n:"Emmett Johnson",p:"RB"},
+  {n:"Isaiah Likely",p:"TE"},{n:"Trey Benson",p:"RB",vor:-3.24},{n:"Stefon Diggs",p:"WR",vor:-0.32},{n:"Romeo Doubs",p:"WR",vor:-0.91},{n:"Jonah Coleman",p:"RB"},
+  {n:"Matthew Stafford",p:"QB",vor:4.39},{n:"Jayden Reed",p:"WR",vor:-1.79},{n:"Alvin Kamara",p:"RB",vor:-2.32},{n:"Khalil Shakir",p:"WR",vor:-1.66},{n:"Bo Nix",p:"QB",vor:-1},
+  {n:"Xavier Worthy",p:"WR"},{n:"Tyjae Spears",p:"RB",vor:-3.71},{n:"Jauan Jennings",p:"WR",vor:0.2},{n:"Rachaad White",p:"RB",vor:-2.78},{n:"AJ Barner",p:"TE",vor:-0.98},
+  {n:"Brandon Aubrey",p:"K",vor:1.28},{n:"Cameron Dicker",p:"K",vor:0.09},{n:"Ka'imi Fairbairn",p:"K",vor:3.21},{n:"Jason Myers",p:"K",vor:2.12},{n:"Evan McPherson",p:"K",vor:-1.13},{n:"Chase McLaughlin",p:"K",vor:-0.45},{n:"Cam Little",p:"K",vor:-0.24},{n:"Chris Boswell",p:"K",vor:-1.2},
+  {n:"Pittsburgh Steelers",p:"DST",vor:0},{n:"Los Angeles Chargers",p:"DST",vor:-0.5},{n:"Denver Broncos",p:"DST",vor:1.3},{n:"Seattle Seahawks",p:"DST",vor:2.4},{n:"Jacksonville Jaguars",p:"DST",vor:1.3},{n:"Houston Texans",p:"DST",vor:1.3},{n:"Los Angeles Rams",p:"DST",vor:0.7},{n:"Baltimore Ravens",p:"DST"},
+  {n:"Spencer Shrader",p:"K",vor:1.98},{n:"Darren Waller",p:"TE",vor:1.5},{n:"Zane Gonzalez",p:"K",vor:0.7},{n:"Philadelphia Eagles",p:"DST",vor:0.6},{n:"Jake Moody",p:"K",vor:0.37},{n:"Will Reichard",p:"K",vor:0.35},{n:"Charlie Smyth",p:"K",vor:0.31},{n:"Cleveland Browns",p:"DST",vor:0.3},{n:"Minnesota Vikings",p:"DST",vor:0.3},{n:"Jared Goff",p:"QB",vor:0.07},{n:"New England Patriots",p:"DST",vor:0.2}
+];
+
+const STORAGE_KEY = 'rfl2025-draft-2026-v1';
+const RANKINGS_KEY = 'rfl2025-rankings-refreshed-2026';
+const ADP_YEAR = 2026;
+const ADP_FORMAT = 'standard'; // confirmed from ESPN league settings: no points per reception
+let picks = [];
+let timerInterval = null;
+
+function normalizeName(s) {
+  return s.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim();
+}
+
+function namesMatch(a, b) {
+  const na = normalizeName(a), nb = normalizeName(b);
+  if (!na || !nb) return false;
+  return na === nb || na.includes(nb) || nb.includes(na);
+}
+
+async function fetchJsonWithCorsFallback(url) {
+  // Try direct first, then fall back through a chain of public CORS proxies —
+  // any single free proxy can be flaky or overloaded, so try several before giving up.
+  const attempts = [
+    { label: 'direct', build: () => url },
+    { label: 'allorigins', build: () => 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url) },
+    { label: 'corsproxy.io', build: () => 'https://corsproxy.io/?url=' + encodeURIComponent(url) },
+    { label: 'codetabs', build: () => 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(url) }
+  ];
+  let lastErr = new Error('no attempts made');
+  for (const attempt of attempts) {
+    try {
+      const res = await fetch(attempt.build());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return await res.json();
+    } catch (e) {
+      lastErr = new Error(attempt.label + ': ' + e.message);
+    }
+  }
+  throw lastErr;
+}
+
+async function fetchADP() {
+  const url = 'https://fantasyfootballcalculator.com/api/v1/adp/' + ADP_FORMAT + '?teams=' + teams.length + '&year=' + ADP_YEAR;
+  const data = await fetchJsonWithCorsFallback(url);
+  const live = (data.players || []).map(p => ({
+    n: p.name,
+    p: p.position === 'DEF' ? 'DST' : p.position,
+    adp: p.adp,
+    bye: p.bye || null
+  }));
+  if (!live.length) throw new Error('empty response');
+
+  const draftedNames = picks.map(pk => pk.name);
+  let updated = 0, added = 0;
+
+  live.forEach(lp => {
+    if (draftedNames.some(dn => namesMatch(dn, lp.n))) return;
+    const existing = players.find(pl => namesMatch(pl.n, lp.n));
+    if (existing) {
+      existing.s = Math.max(0, 1000 - lp.adp);
+      existing.adp = lp.adp;
+      if (lp.bye) existing.bye = lp.bye;
+      updated++;
+    } else {
+      players.push({ n: lp.n, p: lp.p, s: Math.max(0, 1000 - lp.adp), adp: lp.adp, bye: lp.bye });
+      added++;
+    }
+  });
+  return { updated, added };
+}
+
+async function fetchDepthCharts() {
+  const res = await fetch('https://api.sleeper.app/v1/players/nfl');
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  const list = Array.isArray(data) ? data : Object.values(data || {});
+  if (!list.length) throw new Error('empty response');
+
+  const relevant = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  const byName = [];
+  list.forEach(pl => {
+    if (!pl || !relevant.includes(pl.position)) return;
+    const name = pl.full_name || ((pl.first_name || '') + ' ' + (pl.last_name || '')).trim();
+    if (!name) return;
+    let depth = null;
+    if (pl.depth_chart_position && pl.depth_chart_order) {
+      depth = pl.depth_chart_position + pl.depth_chart_order;
+    }
+    byName.push({
+      n: name,
+      rookie: pl.years_exp === 0,
+      depth: depth,
+      team: pl.team || null
+    });
+  });
+
+  const draftedNames = picks.map(pk => pk.name);
+  let matched = 0;
+  players.forEach(existing => {
+    if (draftedNames.some(dn => namesMatch(dn, existing.n))) return;
+    const found = byName.find(dp => namesMatch(existing.n, dp.n));
+    if (found) {
+      existing.rookie = found.rookie || undefined;
+      existing.depth = found.depth || undefined;
+      if (existing.p !== 'DST') existing.team = found.team || undefined;
+      matched++;
+    }
+  });
+  return { matched };
+}
+
+async function fetchLiveRankings() {
+  const btn = document.getElementById('refresh-btn');
+  const status = document.getElementById('rankings-status');
+  btn.disabled = true;
+  status.textContent = 'Refreshing rankings…';
+  const now = new Date();
+  const stamp = now.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const parts = [];
+
+  try {
+    const adpResult = await fetchADP();
+    parts.push('ADP: ' + adpResult.updated + ' updated, ' + adpResult.added + ' added');
+  } catch (e) {
+    parts.push('ADP refresh failed (' + e.message + ')');
+  }
+
+  try {
+    status.textContent = 'Fetching depth charts and rookie status…';
+    const depthResult = await fetchDepthCharts();
+    parts.push('depth charts: ' + depthResult.matched + ' matched');
+  } catch (e) {
+    parts.push('depth chart fetch failed (' + e.message + ')');
+  }
+
+  renderAll();
+  saveState();
+  localStorage.setItem(RANKINGS_KEY, now.toISOString());
+  status.textContent = 'Refreshed ' + stamp + ' — ' + parts.join('; ');
+  btn.disabled = false;
+}
+
+function showRankingsStatusOnLoad() {
+  const status = document.getElementById('rankings-status');
+  const last = localStorage.getItem(RANKINGS_KEY);
+  if (last) {
+    const d = new Date(last);
+    status.textContent = 'Rankings last refreshed ' + d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  } else {
+    status.textContent = 'Rankings not yet refreshed live — click the refresh button for current ADP';
+  }
+}
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ picks, players }));
+    const status = document.getElementById('save-status');
+    const now = new Date();
+    status.textContent = 'Saved ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  } catch (e) {
+    document.getElementById('save-status').textContent = 'Could not save (browser storage unavailable)';
+  }
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    if (data && Array.isArray(data.picks) && Array.isArray(data.players)) {
+      picks = data.picks;
+      players = data.players;
+      return picks.length > 0;
+    }
+  } catch (e) {}
+  return false;
+}
+
+function pickInfo(overall) {
+  const round = Math.ceil(overall / teams.length);
+  const posInRound = (overall - 1) % teams.length;
+  const idx = round % 2 === 1 ? posInRound : teams.length - 1 - posInRound;
+  return { round, team: teams[idx], cls: teamClass[idx] };
+}
+
+function stopTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+  const t = document.getElementById('pick-timer');
+  if (t) t.textContent = '';
+}
+
+function startTimer() {
+  stopTimer();
+  let remaining = PICK_SECONDS;
+  const t = document.getElementById('pick-timer');
+  const render = () => {
+    const m = Math.floor(remaining / 60);
+    const s = String(remaining % 60).padStart(2, '0');
+    t.textContent = m + ':' + s;
+    t.style.color = remaining <= 10 ? '#E24B4A' : '';
+  };
+  render();
+  timerInterval = setInterval(() => {
+    remaining--;
+    if (remaining < 0) { stopTimer(); return; }
+    render();
+  }, 1000);
+}
+
+function renderTurn() {
+  const overall = picks.length + 1;
+  const el = document.getElementById('turn-banner');
+  const textEl = document.getElementById('turn-text');
+  el.className = '';
+  if (overall > teams.length * TOTAL_ROUNDS) {
+    el.style.background = 'var(--surface-1)';
+    el.style.color = 'var(--text-secondary)';
+    textEl.innerHTML = 'Draft complete';
+    stopTimer();
+    return;
+  }
+  const { round, team, cls } = pickInfo(overall);
+  el.className = cls;
+  const isYou = team === YOU;
+  let line = '<i class="ti ti-ball-american-football"></i> Round ' + round + ', pick ' + overall + ' — ' + (isYou ? 'your turn (Brian)' : team + "'s turn");
+  if (isYou) {
+    const rec = bestAvailable();
+    if (rec) {
+      const p = rec.player;
+      line += ' — <strong>Recommended: ' + p.n + ' (' + p.p + ')</strong>';
+      if (rec.urgent) {
+        line += ' <span style="font-weight:400; font-size:13px;">— best value in our scoring, and ADP says he likely won\'t last to pick ' + rec.nextTurn + '</span>';
+      }
+    }
+  }
+  textEl.innerHTML = line;
+  startTimer();
+}
+
+function renderRoster() {
+  const el = document.getElementById('roster');
+  const mine = picks.filter(p => p.team === YOU);
+  el.innerHTML = mine.length ? mine.map(p =>
+    '<span style="background:var(--bg-accent); color:var(--text-accent); font-size:13px; padding:4px 10px; border-radius:var(--radius);">' + p.name + '</span>'
+  ).join('') : '<span style="font-size:13px; color:var(--text-muted);">No picks yet</span>';
+}
+
+// Rank primarily by VOR (our league's exact scoring, value over replacement) since that's the
+// truest measure of a player's worth in THIS league. Players without a computed VOR (mostly
+// rookies with no 2025 stats, or deep bench players outside our data pull) fall back to live
+// ADP so they still sort sensibly relative to each other, below the VOR-ranked group.
+function playerValue(pl) {
+  if (pl.vor != null) return { tier: 2, val: pl.vor };
+  if (pl.s != null) return { tier: 1, val: pl.s };
+  return { tier: 0, val: 0 };
+}
+
+function rankedPool(filter) {
+  let pool;
+  if (filter === 'ALL') pool = players.slice();
+  else if (filter === 'FLEX') pool = players.filter(pl => pl.p === 'RB' || pl.p === 'WR' || pl.p === 'TE');
+  else pool = players.filter(pl => pl.p === filter);
+  pool.sort((a, b) => {
+    const va = playerValue(a), vb = playerValue(b);
+    if (va.tier !== vb.tier) return vb.tier - va.tier;
+    return vb.val - va.val;
+  });
+  return pool.slice(0, 8);
+}
+
+// Snake-draft math: the next overall pick number at which YOU pick again, after `afterOverall`.
+function nextOwnPick(afterOverall) {
+  const maxPick = teams.length * TOTAL_ROUNDS;
+  let o = afterOverall + 1;
+  while (o <= maxPick && pickInfo(o).team !== YOU) o++;
+  return o;
+}
+
+// Combine both data sets: use our league's real VOR to build a short list of genuinely good
+// picks, then use live market ADP to decide WHICH of them to grab right now — prioritizing
+// whichever top-value player the market says probably won't survive until your next turn.
+function bestAvailable() {
+  const overall = picks.length + 1;
+  const shortlist = rankedPool('ALL');
+  if (!shortlist.length) return null;
+  const nextTurn = nextOwnPick(overall);
+  const atRisk = shortlist.filter(pl => pl.adp != null && pl.adp <= nextTurn);
+  const pick = atRisk.length ? atRisk[0] : shortlist[0];
+  return { player: pick, urgent: atRisk.length > 0, nextTurn };
+}
+
+function renderAvailable() {
+  const el = document.getElementById('available');
+  const filter = document.getElementById('pos-filter').value;
+  const top = rankedPool(filter);
+  const overall = picks.length + 1;
+  const nextTurn = nextOwnPick(overall);
+  el.innerHTML = top.length ? top.map((pl, i) => {
+    const urgent = pl.adp != null && pl.adp <= nextTurn;
+    return '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
+    (pl.team ? ' <span style="color:var(--text-muted); font-size:11px;">' + pl.team + '</span>' : '') +
+    (pl.vor != null ? ' <span style="color:var(--text-muted); font-size:11px;" title="Value over replacement under our league\'s exact scoring">' + (pl.vor >= 0 ? '+' : '') + pl.vor.toFixed(1) + ' pts</span>' : '') +
+    (pl.depth ? ' <span class="pos-badge" style="background:var(--surface-1); color:var(--text-secondary);">' + pl.depth + '</span>' : '') +
+    (pl.rookie ? ' <span class="pos-badge" style="background:var(--bg-accent); color:var(--text-accent);">R</span>' : '') +
+    (pl.bye ? ' <span style="color:var(--text-muted); font-size:11px;">bye ' + pl.bye + '</span>' : '') +
+    (urgent ? ' <span style="color:#E24B4A; font-size:11px;" title="ADP suggests he probably won\'t be here at your next pick">won\'t last</span>' : '') +
+    '</div>';
+  }).join('') : '<div style="color:var(--text-muted);">None left</div>';
+}
+
+function renderBoard() {
+  const el = document.getElementById('board');
+  if (!picks.length) {
+    el.innerHTML = '<div style="padding:12px; font-size:13px; color:var(--text-muted);">No picks logged yet</div>';
+    return;
+  }
+  el.innerHTML = picks.slice().reverse().map(p =>
+    '<div class="' + p.cls + '" style="display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:0.5px solid var(--border); font-size:13px;">' +
+    '<span><i class="ti ti-ball-american-football" style="font-size:14px; margin-right:6px;"></i>R' + p.round + '.' + p.overall + ' — ' + p.team + '</span><span style="font-weight:500;">' + p.name + '</span></div>'
+  ).join('');
+}
+
+function renderAll() {
+  renderTurn();
+  renderRoster();
+  renderAvailable();
+  renderBoard();
+}
+
+function addPick() {
+  const input = document.getElementById('pick-input');
+  const name = input.value.trim();
+  if (!name) return;
+  const overall = picks.length + 1;
+  const { round, team, cls } = pickInfo(overall);
+  const idx = players.findIndex(pl => pl.n.toLowerCase().includes(name.toLowerCase()) || name.toLowerCase().includes(pl.n.toLowerCase()));
+  let removedPlayer = null;
+  if (idx !== -1) {
+    removedPlayer = players[idx];
+    players.splice(idx, 1);
+  }
+  picks.push({ name, team, round, overall, cls, removedPlayer });
+  input.value = '';
+  renderAll();
+  saveState();
+  input.focus();
+}
+
+function undoPick() {
+  if (!picks.length) return;
+  const last = picks.pop();
+  if (last.removedPlayer) players.push(last.removedPlayer);
+  renderAll();
+  saveState();
+}
+
+function resetDraft() {
+  if (!confirm('Reset the whole draft? This clears all logged picks.')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+document.getElementById('add-btn').addEventListener('click', addPick);
+document.getElementById('pick-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addPick();
+});
+document.getElementById('pos-filter').addEventListener('change', renderAvailable);
+document.getElementById('undo-btn').addEventListener('click', undoPick);
+document.getElementById('reset-btn').addEventListener('click', resetDraft);
+document.getElementById('refresh-btn').addEventListener('click', fetchLiveRankings);
+
+const restored = loadState();
+renderAll();
+showRankingsStatusOnLoad();
+if (restored) {
+  document.getElementById('save-status').textContent = 'Restored ' + picks.length + ' saved pick' + (picks.length === 1 ? '' : 's') + ' from this browser';
+}
+if (!restored) {
+  // Fresh draft (no saved picks) — sync live ADP automatically before use.
+  fetchLiveRankings();
+}
+</script>
+</body>
+</html>
