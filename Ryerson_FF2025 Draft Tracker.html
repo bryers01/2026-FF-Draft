@@ -62,6 +62,7 @@
     .pos-K{background:#633806;color:#FAEEDA}
     .pos-DST{background:#444441;color:#F1EFE8}
   }
+  .avail-row:hover{background:var(--surface-1);}
 </style>
 </head>
 <body>
@@ -459,7 +460,8 @@ function renderAvailable() {
   const nextTurn = nextOwnPick(overall);
   el.innerHTML = top.length ? top.map((pl, i) => {
     const urgent = pl.adp != null && pl.adp <= nextTurn;
-    return '<div>' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
+    const safeName = pl.n.replace(/"/g, '&quot;');
+    return '<div class="avail-row" data-name="' + safeName + '" style="cursor:pointer;" title="Click to log this pick">' + (i + 1) + '. ' + pl.n + ' <span class="pos-badge pos-' + pl.p + '">' + pl.p + '</span>' +
     (pl.team ? ' <span style="color:var(--text-muted); font-size:11px;">' + pl.team + '</span>' : '') +
     (pl.vor != null ? ' <span style="color:var(--text-muted); font-size:11px;" title="Value over replacement under our league\'s exact scoring">' + (pl.vor >= 0 ? '+' : '') + pl.vor.toFixed(1) + ' pts</span>' : '') +
     (pl.depth ? ' <span class="pos-badge" style="background:var(--surface-1); color:var(--text-secondary);">' + pl.depth + '</span>' : '') +
@@ -489,9 +491,9 @@ function renderAll() {
   renderBoard();
 }
 
-function addPick() {
+function addPick(nameArg) {
   const input = document.getElementById('pick-input');
-  const name = input.value.trim();
+  const name = (nameArg !== undefined ? nameArg : input.value).trim();
   if (!name) return;
   const overall = picks.length + 1;
   const { round, team, cls } = pickInfo(overall);
@@ -522,9 +524,13 @@ function resetDraft() {
   location.reload();
 }
 
-document.getElementById('add-btn').addEventListener('click', addPick);
+document.getElementById('add-btn').addEventListener('click', () => addPick());
 document.getElementById('pick-input').addEventListener('keydown', e => {
   if (e.key === 'Enter') addPick();
+});
+document.getElementById('available').addEventListener('click', e => {
+  const row = e.target.closest('.avail-row');
+  if (row) addPick(row.dataset.name);
 });
 document.getElementById('pos-filter').addEventListener('change', renderAvailable);
 document.getElementById('undo-btn').addEventListener('click', undoPick);
